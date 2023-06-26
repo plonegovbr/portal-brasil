@@ -1,0 +1,6 @@
+src/addons/**/node_modules
+src/addons/**/cypress
+src/addons/**/build
+src/addons/*
+!src/addons/volto-brasil-site
+!src/addons/volto-brasil-theme

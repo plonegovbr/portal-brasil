@@ -1,0 +1,5 @@
+src/**/CHANGELOG.md
+src/**/README.md
+src/addons/*
+!src/addons/volto-brasil-site
+!src/addons/volto-brasil-theme
