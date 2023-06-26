@@ -5,6 +5,7 @@
 *.py?
 *.swp
 # dirs
+.idea/
 bin/
 buildout-cache/
 data/*.json
