@@ -1,0 +1,138 @@
+name: Frontend CI
+
+on:
+  push:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend.yml"
+  workflow_dispatch:
+
+env:
+  node-version: 18.x
+  VOLTO_VERSION: "17.0.0-alpha.14"
+  YARN_CACHE_FOLDER: "/home/runner/.cache/.yarn"
+  IMAGE_NAME: ghcr.io/ploneorgbr/portal
+
+defaults:
+  run:
+    working-directory: ./frontend
+
+jobs:
+
+  meta:
+    runs-on: ubuntu-latest
+    outputs:
+      ENVIRONMENT: ${{ steps.vars.outputs.ENVIRONMENT }}
+      STACK_NAME: ${{ steps.vars.outputs.STACK_NAME }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set Env Vars
+        id: vars
+        run: |
+          ENVIRONMENT=${{ vars.STG_ENV }}
+          echo "ENVIRONMENT=${ENVIRONMENT}" >> $GITHUB_OUTPUT
+          echo "STACK_NAME=${ENVIRONMENT//./-}" >> $GITHUB_OUTPUT
+
+  code-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout codebase
+        uses: actions/checkout@v3
+
+      - name: Update Global Yarn
+        run: |
+          corepack enable
+          corepack prepare yarn@stable --activate
+
+      - name: Use Node.js ${{ env.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.node-version }}
+          cache: 'yarn'
+          cache-dependency-path: 'frontend/yarn.lock'
+
+      - name: Prettier
+        id: prettier
+        run: npx prettier@2.0.5 --single-quote --check 'src/**/*.{js,jsx,ts,tsx,css,scss}' --config=package.json
+
+      - name: Install packages
+        run: make install
+
+      - name: ESLint
+        id: eslint
+        if: ${{ success() || failure() }}
+        run: yarn run lint:ci
+
+      - name: i18n sync
+        id: i18n
+        if: ${{ success() || failure() }}
+        run: make i18n-ci
+
+      - name: Unit Tests
+        id: unit
+        if: ${{ success() || failure() }}
+        run: make test
+
+      - name: Report
+        if: ${{ success() || failure() }}
+        run: |
+          echo '# Code Analysis' >> $GITHUB_STEP_SUMMARY
+          echo '| Test | Status |' >> $GITHUB_STEP_SUMMARY
+          echo '| --- | --- |' >> $GITHUB_STEP_SUMMARY
+          echo '| Prettier | ${{ steps.prettier.conclusion == 'failure' && '❌' || ' ✅' }} |' >> $GITHUB_STEP_SUMMARY
+          echo '| ESLint | ${{ steps.eslint.conclusion == 'failure' && '❌' || ' ✅' }} |' >> $GITHUB_STEP_SUMMARY
+          echo '| i18n | ${{ steps.i18n.conclusion == 'failure' && '❌' || ' ✅' }} |' >> $GITHUB_STEP_SUMMARY
+          echo '| Unit Tests | ${{ steps.unit.conclusion == 'failure' && '❌' || ' ✅' }} |' >> $GITHUB_STEP_SUMMARY
+
+  release:
+    runs-on: ubuntu-latest
+    needs:
+      - code-analysis
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ${{ env.IMAGE_NAME }}
+          labels: |
+            org.label-schema.docker.cmd=docker run -d -p 3000:3000 ${{ env.IMAGE_NAME }}:latest
+          flavor:
+            latest=false
+          tags: |
+            type=ref,event=branch
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          platforms: linux/amd64
+          context: frontend/
+          file: frontend/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: $${{ steps.meta.outputs.labels }}
