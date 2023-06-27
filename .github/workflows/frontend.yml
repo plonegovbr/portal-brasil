@@ -19,22 +19,6 @@ defaults:
 
 jobs:
 
-  meta:
-    runs-on: ubuntu-latest
-    outputs:
-      ENVIRONMENT: ${{ steps.vars.outputs.ENVIRONMENT }}
-      STACK_NAME: ${{ steps.vars.outputs.STACK_NAME }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Set Env Vars
-        id: vars
-        run: |
-          ENVIRONMENT=${{ vars.STG_ENV }}
-          echo "ENVIRONMENT=${ENVIRONMENT}" >> $GITHUB_OUTPUT
-          echo "STACK_NAME=${ENVIRONMENT//./-}" >> $GITHUB_OUTPUT
-
   code-analysis:
     runs-on: ubuntu-latest
     steps:
@@ -64,11 +48,6 @@ jobs:
         id: eslint
         if: ${{ success() || failure() }}
         run: yarn run lint:ci
-
-      - name: i18n sync
-        id: i18n
-        if: ${{ success() || failure() }}
-        run: make i18n-ci
 
       - name: Unit Tests
         id: unit
