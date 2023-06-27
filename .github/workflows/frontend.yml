@@ -11,7 +11,7 @@ env:
   node-version: 18.x
   VOLTO_VERSION: "17.0.0-alpha.14"
   YARN_CACHE_FOLDER: "/home/runner/.cache/.yarn"
-  IMAGE_NAME: ghcr.io/ploneorgbr/portal
+  IMAGE_NAME: ghcr.io/plonegovbr/portal
 
 defaults:
   run:
