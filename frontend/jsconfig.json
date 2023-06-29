@@ -1,9 +1,6 @@
 {
     "compilerOptions": {
         "paths": {
-            "@kitconcept/volto-light-theme": [
-                "addons/volto-light-theme/src"
-            ],
             "@plonegovbr/volto-brasil-site": [
                 "addons/volto-brasil-site/src"
             ],
