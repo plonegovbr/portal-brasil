@@ -15,9 +15,9 @@ GREEN=`tput setaf 2`
 RESET=`tput sgr0`
 YELLOW=`tput setaf 3`
 
-PLONE_VERSION=6.0.5
+PLONE_VERSION=6.0.6
 
-DISTRIBUTIONS="portal_edu"
+DISTRIBUTIONS="portal_edu,portal_leg"
 
 BACKEND_FOLDER=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
